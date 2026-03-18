@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e
+
+# Create launcher in /usr/local/bin
+cat > /usr/local/bin/window-transparency <<'EOF'
+#!/bin/bash
+cd /usr/share/window-transparency
+exec python3 main.py "$@"
+EOF
+chmod +x /usr/local/bin/window-transparency
+
+# Install default config for new users via /etc/skel
+mkdir -p /etc/skel/.config/window-transparency
+if [ ! -f /etc/skel/.config/window-transparency/config.ini ]; then
+    cp /usr/share/window-transparency/default.ini \
+       /etc/skel/.config/window-transparency/config.ini
+fi
+
+echo "window-transparency installed. Run: window-transparency"

@@ -1,0 +1,12 @@
+Package: window-transparency
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: all
+Depends: python3 (>= 3.8), python3-gi, xdotool, x11-utils
+Recommends: gir1.2-keybinder-3.0
+Maintainer: Mounstroya
+Description: System tray tool to control active window transparency on X11
+ Allows toggling and adjusting the transparency of the active window
+ directly from the system tray. Supports presets, per-application rules,
+ custom opacity levels, and an optional global keyboard shortcut.

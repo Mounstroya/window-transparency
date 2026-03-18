@@ -1,6 +1,13 @@
 # window-transparency
 
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org)
+[![Platform](https://img.shields.io/badge/platform-X11%20%2F%20Linux-lightgrey.svg)]()
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 A lightweight system tray tool to control the transparency of the active window on X11.
+
+<!-- Demo GIF — replace with your own recording -->
+<!-- ![demo](assets/demo.gif) -->
 
 ## Features
 
@@ -17,8 +24,11 @@ A lightweight system tray tool to control the transparency of the active window 
 - X11 display server
 - `xdotool`
 - `xprop`
-- Python 3 with PyGObject (`python3-gi`)
+- Python 3.8+ with PyGObject (`python3-gi`)
 - `gir1.2-keybinder-3.0` *(optional, recommended — enables keyboard shortcuts)*
+
+> **Wayland:** not supported. This tool relies on `xprop` and `xdotool`, which are X11-only.
+> Wayland support is not planned for now, but contributions are welcome.
 
 Install dependencies on Debian/Ubuntu:
 
@@ -32,10 +42,25 @@ For keyboard shortcut support (recommended):
 sudo apt install gir1.2-keybinder-3.0
 ```
 
+> **Without keybinder:** the app works normally — toggle, presets, and all menus function as usual.
+> The only feature that won't be available is the global keyboard shortcut.
+> No errors or warnings will appear; the shortcut option in Settings will simply show a notice.
+
 ## Installation
 
+### Option A — .deb package (Debian/Ubuntu, recommended)
+
+Download the latest `.deb` from the [Releases](https://github.com/Mounstroya/window-transparency/releases) page and install it:
+
 ```bash
-git clone https://github.com/YOUR_USERNAME/window-transparency.git
+sudo dpkg -i window-transparency_*.deb
+sudo apt-get install -f   # fix any missing dependencies
+```
+
+### Option B — Manual install
+
+```bash
+git clone https://github.com/Mounstroya/window-transparency.git
 cd window-transparency
 bash install.sh
 ```
@@ -80,6 +105,14 @@ The shortcut format follows GTK syntax: `<Ctrl>`, `<Alt>`, `<Shift>`, `<Super>` 
 No shortcut is set by default to avoid conflicts — set one during installation or from the Settings menu.
 
 ## Uninstall
+
+### If installed via .deb
+
+```bash
+sudo dpkg -r window-transparency
+```
+
+### If installed manually
 
 ```bash
 bash uninstall.sh
