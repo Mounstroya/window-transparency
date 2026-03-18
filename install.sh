@@ -36,14 +36,31 @@ exec python3 main.py "\$@"
 EOF
 chmod +x "$BIN_DIR/window-transparency"
 
-# Copy default config if not already present
+# Build config from default and ask for shortcut
+mkdir -p "$CONFIG_DIR"
 if [ ! -f "$CONFIG_DIR/config.ini" ]; then
-    mkdir -p "$CONFIG_DIR"
     cp config/default.ini "$CONFIG_DIR/config.ini"
-    echo "Default config installed at $CONFIG_DIR/config.ini"
+fi
+
+# Ask for keyboard shortcut
+echo ""
+if python3 -c "import gi; gi.require_version('Keybinder','3.0'); from gi.repository import Keybinder" 2>/dev/null; then
+    echo "Keyboard shortcut (optional)."
+    echo "Format examples: <Ctrl><Alt>t   <Super>t   <Shift><Alt>o"
+    read -p "Enter shortcut or leave empty to skip: " shortcut
+    if [ -n "$shortcut" ]; then
+        sed -i "s|^shortcut =.*|shortcut = $shortcut|" "$CONFIG_DIR/config.ini"
+        echo "Shortcut set to: $shortcut"
+    else
+        echo "No shortcut set. You can add one later from the Settings menu."
+    fi
+else
+    echo "Note: install 'gir1.2-keybinder-3.0' to enable keyboard shortcuts."
+    echo "      sudo apt install gir1.2-keybinder-3.0"
 fi
 
 # Optional: add to autostart
+echo ""
 read -p "Add to autostart? [y/N] " answer
 if [[ "$answer" =~ ^[Yy]$ ]]; then
     mkdir -p "$AUTOSTART_DIR"
@@ -59,4 +76,5 @@ EOF
     echo "Autostart entry created."
 fi
 
+echo ""
 echo "Done! Run 'window-transparency' to start."
