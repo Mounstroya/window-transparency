@@ -1,5 +1,12 @@
 import gi
 gi.require_version("Gtk", "3.0")
+try:
+    gi.require_version("Keybinder", "3.0")
+    from gi.repository import Keybinder
+    KEYBINDER_AVAILABLE = True
+except ValueError:
+    KEYBINDER_AVAILABLE = False
+
 from gi.repository import Gtk, GLib
 
 from transparency import (
@@ -15,6 +22,8 @@ from config import (
     get_app_opacity,
     set_app_opacity,
     set_default_opacity,
+    get_shortcut,
+    set_shortcut,
     save_config,
 )
 
@@ -29,8 +38,32 @@ class TransparencyTray:
         self.icon.connect("popup-menu", self.on_right_click)
         self.icon.set_visible(True)
 
+        self._register_shortcut(get_shortcut(self.config))
+
+    # ------------------------------------------------------------------
+    # Keybinder
+    # ------------------------------------------------------------------
+
+    def _register_shortcut(self, shortcut):
+        if not KEYBINDER_AVAILABLE or not shortcut:
+            return
+        Keybinder.init()
+        Keybinder.bind(shortcut, self._on_shortcut)
+
+    def _unregister_shortcut(self, shortcut):
+        if not KEYBINDER_AVAILABLE or not shortcut:
+            return
+        Keybinder.unbind(shortcut)
+
+    def _on_shortcut(self, keystring):
+        self.on_left_click(None)
+
+    # ------------------------------------------------------------------
+    # Click handlers
+    # ------------------------------------------------------------------
+
     def on_left_click(self, icon):
-        """Left click: toggle transparency on active window."""
+        """Toggle transparency on the active window."""
         try:
             window_id = get_active_window_id()
             app_name = get_window_class(window_id)
@@ -49,7 +82,16 @@ class TransparencyTray:
     def on_right_click(self, icon, button, time):
         menu = Gtk.Menu()
 
-        # --- Apply preset section ---
+        shortcut = get_shortcut(self.config)
+        shortcut_label = f"  ({shortcut})" if shortcut else ""
+
+        toggle_item = Gtk.MenuItem(label=f"Toggle active window{shortcut_label}")
+        toggle_item.connect("activate", self.on_left_click)
+        menu.append(toggle_item)
+
+        menu.append(Gtk.SeparatorMenuItem())
+
+        # --- Presets ---
         presets = get_presets(self.config)
         for name, value in presets.items():
             item = Gtk.MenuItem(label=f"{name.capitalize()} ({value}%)")
@@ -77,13 +119,16 @@ class TransparencyTray:
 
         menu.append(Gtk.SeparatorMenuItem())
 
-        # --- Quit ---
         quit_item = Gtk.MenuItem(label="Quit")
         quit_item.connect("activate", Gtk.main_quit)
         menu.append(quit_item)
 
         menu.show_all()
         menu.popup(None, None, None, None, button, time)
+
+    # ------------------------------------------------------------------
+    # Dialogs
+    # ------------------------------------------------------------------
 
     def _apply_preset(self, item, percent):
         try:
@@ -93,10 +138,7 @@ class TransparencyTray:
             self._show_error(str(e))
 
     def _custom_opacity_dialog(self, item):
-        dialog = Gtk.Dialog(
-            title="Custom Opacity",
-            flags=Gtk.DialogFlags.MODAL,
-        )
+        dialog = Gtk.Dialog(title="Custom Opacity", flags=Gtk.DialogFlags.MODAL)
         dialog.add_buttons(
             Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
             Gtk.STOCK_OK, Gtk.ResponseType.OK,
@@ -108,8 +150,7 @@ class TransparencyTray:
         box.set_margin_start(12)
         box.set_margin_end(12)
 
-        label = Gtk.Label(label="Opacity (1–100):")
-        box.add(label)
+        box.add(Gtk.Label(label="Opacity (1–100):"))
 
         try:
             window_id = get_active_window_id()
@@ -118,8 +159,7 @@ class TransparencyTray:
             current = get_default_opacity(self.config)
 
         adjustment = Gtk.Adjustment(
-            value=current, lower=1, upper=100,
-            step_increment=1, page_increment=5
+            value=current, lower=1, upper=100, step_increment=1, page_increment=5
         )
         scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adjustment)
         scale.set_size_request(250, -1)
@@ -127,12 +167,10 @@ class TransparencyTray:
         box.add(scale)
 
         dialog.show_all()
-        response = dialog.run()
-        if response == Gtk.ResponseType.OK:
-            value = int(scale.get_value())
+        if dialog.run() == Gtk.ResponseType.OK:
             try:
                 window_id = get_active_window_id()
-                set_window_opacity(window_id, value)
+                set_window_opacity(window_id, int(scale.get_value()))
             except RuntimeError as e:
                 self._show_error(str(e))
         dialog.destroy()
@@ -150,10 +188,7 @@ class TransparencyTray:
             self._show_error("Could not detect application name.")
             return
 
-        dialog = Gtk.Dialog(
-            title=f"Rule for '{app_name}'",
-            flags=Gtk.DialogFlags.MODAL,
-        )
+        dialog = Gtk.Dialog(title=f"Rule for '{app_name}'", flags=Gtk.DialogFlags.MODAL)
         dialog.add_buttons(
             Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
             Gtk.STOCK_OK, Gtk.ResponseType.OK,
@@ -165,12 +200,10 @@ class TransparencyTray:
         box.set_margin_start(12)
         box.set_margin_end(12)
 
-        label = Gtk.Label(label=f"Default opacity for {app_name} (1–100):")
-        box.add(label)
+        box.add(Gtk.Label(label=f"Default opacity for {app_name} (1–100):"))
 
         adjustment = Gtk.Adjustment(
-            value=current, lower=1, upper=100,
-            step_increment=1, page_increment=5
+            value=current, lower=1, upper=100, step_increment=1, page_increment=5
         )
         scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adjustment)
         scale.set_size_request(250, -1)
@@ -178,16 +211,11 @@ class TransparencyTray:
         box.add(scale)
 
         dialog.show_all()
-        response = dialog.run()
-        if response == Gtk.ResponseType.OK:
-            value = int(scale.get_value())
-            set_app_opacity(self.config, app_name, value)
+        if dialog.run() == Gtk.ResponseType.OK:
+            set_app_opacity(self.config, app_name, int(scale.get_value()))
         dialog.destroy()
 
     def _open_settings(self, item):
-        default_opacity = get_default_opacity(self.config)
-        presets = get_presets(self.config)
-
         dialog = Gtk.Dialog(title="Settings", flags=Gtk.DialogFlags.MODAL)
         dialog.add_buttons(
             Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
@@ -203,7 +231,7 @@ class TransparencyTray:
         # Default opacity
         box.add(Gtk.Label(label="Default opacity (%):"))
         adj_default = Gtk.Adjustment(
-            value=default_opacity, lower=1, upper=100,
+            value=get_default_opacity(self.config), lower=1, upper=100,
             step_increment=1, page_increment=5
         )
         scale_default = Gtk.Scale(
@@ -217,11 +245,10 @@ class TransparencyTray:
 
         # Presets
         preset_scales = {}
-        for name, value in presets.items():
+        for name, value in get_presets(self.config).items():
             box.add(Gtk.Label(label=f"Preset '{name.capitalize()}' (%):"))
             adj = Gtk.Adjustment(
-                value=value, lower=1, upper=100,
-                step_increment=1, page_increment=5
+                value=value, lower=1, upper=100, step_increment=1, page_increment=5
             )
             scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adj)
             scale.set_size_request(300, -1)
@@ -229,12 +256,34 @@ class TransparencyTray:
             box.add(scale)
             preset_scales[name] = scale
 
+        box.add(Gtk.Separator())
+
+        # Keyboard shortcut
+        if KEYBINDER_AVAILABLE:
+            box.add(Gtk.Label(label="Keyboard shortcut (e.g. <Ctrl><Alt>t):"))
+            shortcut_entry = Gtk.Entry()
+            shortcut_entry.set_text(get_shortcut(self.config))
+            shortcut_entry.set_size_request(300, -1)
+            box.add(shortcut_entry)
+        else:
+            box.add(Gtk.Label(
+                label="Install gir1.2-keybinder-3.0 to enable keyboard shortcuts."
+            ))
+
         dialog.show_all()
-        response = dialog.run()
-        if response == Gtk.ResponseType.OK:
+        if dialog.run() == Gtk.ResponseType.OK:
             set_default_opacity(self.config, int(scale_default.get_value()))
             for name, scale in preset_scales.items():
                 self.config["presets"][name] = str(int(scale.get_value()))
+
+            if KEYBINDER_AVAILABLE:
+                old_shortcut = get_shortcut(self.config)
+                new_shortcut = shortcut_entry.get_text().strip()
+                if new_shortcut != old_shortcut:
+                    self._unregister_shortcut(old_shortcut)
+                    set_shortcut(self.config, new_shortcut)
+                    self._register_shortcut(new_shortcut)
+
             save_config(self.config)
         dialog.destroy()
 
