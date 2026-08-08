@@ -7,16 +7,16 @@ try:
 except ValueError:
     KEYBINDER_AVAILABLE = False
 
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk  # noqa: E402
 
-from transparency import (
+from transparency import (  # noqa: E402
     get_active_window_id,
     get_window_class,
     toggle_opacity,
     set_window_opacity,
     get_window_opacity,
 )
-from config import (
+from config import (  # noqa: E402
     get_default_opacity,
     get_presets,
     get_app_opacity,

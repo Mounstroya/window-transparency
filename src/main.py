@@ -3,13 +3,12 @@
 window-transparency — Systray tool to manage active window opacity on X11.
 """
 
-import sys
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import Gtk  # noqa: E402
 
-from config import load_config
-from tray import TransparencyTray
+from config import load_config  # noqa: E402
+from tray import TransparencyTray  # noqa: E402
 
 
 def main():
