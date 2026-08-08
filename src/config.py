@@ -8,7 +8,7 @@ DEFAULTS = {
     "general": {
         "default_opacity": "85",
         "toggle_restore": "true",
-        "shortcut": "<Ctrl><Alt>t",
+        "shortcut": "",
     },
     "presets": {
         "light": "90",
@@ -67,7 +67,7 @@ def set_default_opacity(config, opacity):
 
 
 def get_shortcut(config):
-    return config["general"].get("shortcut", "<Ctrl><Alt>t")
+    return config["general"].get("shortcut", "")
 
 
 def set_shortcut(config, shortcut):

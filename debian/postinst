@@ -9,11 +9,33 @@ exec python3 main.py "$@"
 EOF
 chmod +x /usr/local/bin/window-transparency
 
-# Install default config for new users via /etc/skel
+# Install default config for future new users via /etc/skel
 mkdir -p /etc/skel/.config/window-transparency
 if [ ! -f /etc/skel/.config/window-transparency/config.ini ]; then
     cp /usr/share/window-transparency/default.ini \
        /etc/skel/.config/window-transparency/config.ini
+fi
+
+# Also install default config for the user who ran the install. dpkg is
+# normally invoked via sudo or pkexec, so $HOME here would be root's, not
+# theirs. sudo exposes $SUDO_USER directly; pkexec only gives us the uid
+# via $PKEXEC_UID, so resolve that to a username instead.
+TARGET_USER="$SUDO_USER"
+if [ -z "$TARGET_USER" ] && [ -n "$PKEXEC_UID" ]; then
+    TARGET_USER=$(getent passwd "$PKEXEC_UID" | cut -d: -f1)
+fi
+
+if [ -n "$TARGET_USER" ]; then
+    USER_HOME=$(getent passwd "$TARGET_USER" | cut -d: -f6)
+    if [ -n "$USER_HOME" ] && [ -d "$USER_HOME" ]; then
+        USER_CONFIG_DIR="$USER_HOME/.config/window-transparency"
+        if [ ! -f "$USER_CONFIG_DIR/config.ini" ]; then
+            mkdir -p "$USER_CONFIG_DIR"
+            cp /usr/share/window-transparency/default.ini \
+               "$USER_CONFIG_DIR/config.ini"
+            chown "$TARGET_USER":"$TARGET_USER" "$USER_CONFIG_DIR" "$USER_CONFIG_DIR/config.ini"
+        fi
+    fi
 fi
 
 echo "window-transparency installed. Run: window-transparency"
