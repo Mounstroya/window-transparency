@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-VERSION="1.0.0"
+VERSION="1.0.1"
 PKG="window-transparency_${VERSION}"
 BUILD_DIR="/tmp/${PKG}"
 
@@ -26,8 +26,8 @@ cp src/*.py              "$BUILD_DIR/usr/share/window-transparency/"
 cp config/default.ini    "$BUILD_DIR/usr/share/window-transparency/"
 cp LICENSE               "$BUILD_DIR/usr/share/doc/window-transparency/copyright"
 
-# Build
-dpkg-deb --build "$BUILD_DIR" "${PKG}_all.deb"
+# Build (files owned by root:root in the archive, not the building user)
+dpkg-deb --root-owner-group --build "$BUILD_DIR" "${PKG}_all.deb"
 
 echo ""
 echo "Done: ${PKG}_all.deb"
